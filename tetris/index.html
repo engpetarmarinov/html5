@@ -1,0 +1,348 @@
+<html>  
+ <head>  
+ 	<title>
+ 		Buggy HTML5 tetris by Tanatos :D
+ 	</title>
+ 	<script src="../js/jquery-1.7.2.min.js"></script>
+	<script type="application/javascript">  
+  	
+	$(document).ready(function() {
+	    init();
+	});
+  	
+  	var status = 0;
+  	var blockPosX = 3;
+  	var blockPosY = 0;
+  	var score = 0;
+  	var ctx;
+  	var interval;
+  	var colors = ['', 
+  	'#00f0f0', //cyan - I
+  	'#0000f0', //blue - J
+  	'#f0a000', //orange - L
+  	'#f0f000', //yellow - O
+  	'#00f000', //S
+  	'#a000f0', // T 
+  	'#f00000', // Z
+  	
+  	];
+  	var currentBlock;
+  	
+  	var blockType;
+  	var nextPiece;
+  	var Elements = [];
+  	Elements[1] = [
+  	[1,1,1,1]
+  	];
+  	Elements[2] = [
+  	[1,1],
+  	[1,0],
+  	[1,0]
+  	];
+  	Elements[3] = [
+  	[1,1],
+  	[0,1],
+  	[0,1]
+  	];
+  	Elements[4] = [
+  	[1,1],
+  	[1,1]
+  	];
+  	Elements[5] = [
+  	[0,1,1],
+  	[1,1,0]
+  	];
+  	Elements[6] = [
+  	[0,1,0],
+  	[1,1,1]
+  	];
+  	Elements[7] = [
+  	[1,1,0],
+  	[0,1,1]
+  	];
+  	//currentBlock = el1.slice();
+  	
+  	
+  	var field = [];
+
+  	
+  	//field[0][2].color =2;
+  	//field[0][2].value =1;
+  	//field[2][2].color =2;
+  	//field[2][2].value =1;
+    //
+  	//field[2][6].color =2;
+  	//field[2][6].value =1;
+  	
+  	$(document).keydown(onKeyDown);
+  	
+  	function DrawCanvas()
+  	{
+        //ctx.fillStyle = "#f00000"; 
+        ctx.strokeStyle = "#000000"; 
+        ctx.strokeRect (0, 0, 102, 162); 
+        ctx.font = "14px Arial";
+        ctx.fillText("Next: ",110,10);
+        //ctx.fillText("Score: ",110,80);
+  	}
+  	
+  	function init()
+  	{
+  		var canvas = document.getElementById("canvas"); 
+  		if (canvas.getContext) {
+  		ctx = canvas.getContext("2d");
+  		DrawCanvas();
+  		}
+  	}	
+  	
+  	function start()
+  	{
+  		
+  		blockPosX = 3;
+  		blockPosY = 0;
+  		score = 0;
+  		status = 1;
+  		
+  		if (interval) clearInterval(interval);
+  		
+  		for (var i=0;i<16;i++)
+  		{
+  			field[i] = [];
+  			for(var j=0;j<10;j++)
+  				field[i][j] = {'color':0, 'value':0};
+  		}
+  		
+  		interval = setInterval(Step,500);  
+  		PushNewBlock(); 
+  		draw();
+  	}
+  		
+
+		function rotate2DArray(array) {
+			var d1 = array.length;
+			var d2 = array[0].length;
+			var r = new Array(d2);
+			for(var i = 0; i < d2; i++){
+				var t = new Array(d1);
+				for(var j = 0; j < d1; j++){
+					t[j] = array[d1 - 1 - j][i];
+				}
+				r[i] = t;
+			}
+			return r;
+		}
+		
+		function CanRotate(rotatedBlock)
+		{
+			var d1 = rotatedBlock.length;
+			var d2 = rotatedBlock[0].length;
+			if (blockPosX+d2 > 10) return false;
+			if (blockPosY+d1 > 16) return false;
+
+  		for (i=rotatedBlock.length-1; i>=0;i--)
+  			for (j=rotatedBlock.length-1; j>=0;j--)
+  				if (rotatedBlock[i][j]==1)
+  					if (field[blockPosY+i][blockPosX+j].value==1) return false;
+  				
+  		return true;
+		}
+
+  	
+  	function rotateBlock()
+  	{
+  		var rotatedBlock = rotate2DArray(currentBlock);
+  		if (CanRotate(rotatedBlock)) currentBlock = rotatedBlock;
+  	}
+  	
+  	function CanMoveRight()
+  	{
+  		//if (blockPosX+currentBlock[0].length < 10) return false;
+  		for (i=currentBlock.length-1; i>=0;i--)
+  			for (j=currentBlock[i].length-1; j>=0;j--)
+  				if (currentBlock[i][j]==1)
+  				{
+  					if (blockPosX+j+1 >= 10) return false;
+  					if (field[blockPosY+i][blockPosX+j+1].value==1) return false;
+  					break;
+  				}
+  		return true;
+  	}
+  	
+  	function CanMoveLeft()
+  	{
+  		if (blockPosX<=0) return false;
+  		for (i=0; i<currentBlock.length;i++)
+  			for (j=0; j<currentBlock[i].length;j++)
+  				if (currentBlock[i][j]==1)
+  				{
+  					if (field[blockPosY+i][blockPosX+j-1].value==1) return false;
+  					break;
+  				}
+  		return true;
+  	}
+  	
+  	function CanMoveDown()
+  	{
+  		for (i=currentBlock.length-1; i>=0;i--)
+  			for (j=0; j<currentBlock[i].length;j++)
+  				if (currentBlock[i][j]==1)
+  				{
+  					if (blockPosY+i+1 > 15) return false;
+  					if (field[blockPosY+i+1][blockPosX+j].value==1) return false;
+  					
+  				}
+  		return true;
+  	}
+  	
+		//set rightDown or leftDown if the right or left keys are down
+		function onKeyDown(evt) {
+			if (status!=1) return;
+		  if (evt.keyCode == 39) if (CanMoveRight()) blockPosX += 1;
+		  if (evt.keyCode == 38) rotateBlock();
+		  if (evt.keyCode == 37) if (CanMoveLeft()) blockPosX -= 1;
+		  if (evt.keyCode == 40) Step();
+		  draw();
+		}
+		
+		function clear()
+		{
+			ctx.clearRect(1,1,100,160); // clear canvas 
+		}
+		
+		function drawSquare(y,x,c)
+		{
+				var top = 1 + 10*y;
+				var left = 1 + 10*x;
+        ctx.fillStyle = "#000000";  
+        ctx.fillRect (left, top, 10, 10); 
+        ctx.fillStyle = colors[c];  
+        ctx.fillRect (left+1, top+1, 8, 8); 
+		}
+		
+		function drawElement()
+		{
+			for (i=0;i<currentBlock.length;i++)
+				for (j=0;j<currentBlock[i].length;j++)
+					if (currentBlock[i][j]==1) drawSquare(blockPosY+i,blockPosX+j,blockType);
+					
+		}
+		
+		function DrawNextPiece()
+		{
+			ctx.clearRect(110,20,50,40);
+  		for (i=0; i<Elements[nextPiece].length;i++)
+  			for (j=0; j<Elements[nextPiece][i].length;j++)
+  				if (Elements[nextPiece][i][j]==1)
+  				{
+							drawSquare(2+i,11+j,nextPiece);
+  				}
+		}
+		
+    function draw() 
+    {  
+       	clear();
+       	
+       	for (var i=0;i<16;i++)
+       		for(var j=0;j<10;j++)
+       			if (field[i][j].value==1)
+       	 			drawSquare(i,j,field[i][j].color);
+       	 			
+       	drawElement();
+ 
+  			 
+    }  
+    
+    function CheckLost()
+    {
+       		for(var j=0;j<10;j++)
+       			if (field[0][j].value==1)
+       			{
+       				clearInterval(interval);
+       				status = 2;
+       				return true;
+       			}
+       			return false;
+    }
+    
+    function PlaceBlock()
+    {
+			for (i=0;i<currentBlock.length;i++)
+				for (j=0;j<currentBlock[i].length;j++)
+					if (currentBlock[i][j]==1)
+					{
+						field[blockPosY+i][blockPosX+j].value=1;
+						field[blockPosY+i][blockPosX+j].color=blockType;
+					}
+			
+			ClearLines();
+			if (CheckLost()) return false;
+			PushNewBlock();
+    }
+    
+    function IsLineFull(line)
+    {
+  			for (j=0; j<10;j++)
+  			{
+  				if (field[line][j].value!=1) return false;
+  			}
+  		return true;
+    }
+    
+    function DeleteLine(l)
+    {
+    	for (i=l; i>=1;i--)
+    		for (j=0; j<10;j++)
+    			{
+    				field[i][j].value = field[i-1][j].value;
+    				field[i][j].color = field[i-1][j].color;
+    			}
+    	for (j=0; j<10;j++) 
+    	{
+    		field[0][j].value = 0;
+    		field[0][j].color = 0;
+    	}
+    }
+    
+    function ClearLines()
+    {
+  		for (i=0; i<16;i++)
+  		{
+				if (IsLineFull(i)) {
+					DeleteLine(i);
+					score += 1;
+					$('#score').html(score);
+					draw();
+				}
+  		}
+    }
+    
+    function PushNewBlock()
+    {
+    	if (!nextPiece) nextPiece = Math.floor(Math.random()*7)+1;
+			blockType = nextPiece;
+    	//blockType = 4;
+    	currentBlock = [];
+    	blockPosX = 3;
+    	blockPosY = 0;
+			currentBlock = Elements[blockType].slice();
+    	nextPiece = Math.floor(Math.random()*7)+1;
+    	DrawNextPiece();
+    }
+    
+    function Step()
+    {
+    	if (CanMoveDown())
+    		blockPosY = blockPosY + 1;
+    	else PlaceBlock();
+    	draw();
+
+    }
+    
+  </script>  
+ </head>  
+ <body onload="">  
+ 	Your score is: <span id="score">0</span><br /><br />
+   <canvas id="canvas" width="160" height="162" ></canvas>  <br>
+   <input type="button" onclick="start()" value="Start">
+ </body>  
+</html>
